@@ -41,10 +41,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const [overview, agent, candidates, positions, orders, analytics, configuration] = await Promise.all([
-        api.overview(), api.agent(), api.candidates(), api.positions(), api.orders(), api.analytics(), api.configuration(),
+      const [overview, agent, analytics, configuration] = await Promise.all([
+        api.overview(), api.agent(), api.analytics(), api.configuration(),
       ]);
-      if (mounted.current) setData((value) => ({ ...value, overview, agent, candidates, positions, orders, analytics, configuration, loading: false, error: null }));
+      if (mounted.current) {
+        setData((value) => ({
+          ...value, overview, agent, analytics, configuration, loading: false, error: null,
+        }));
+      }
+
+      const [candidates, positions, orders] = await Promise.allSettled([
+        api.candidates(), api.positions(), api.orders(),
+      ]);
+      if (mounted.current) {
+        setData((value) => ({
+          ...value,
+          candidates: candidates.status === "fulfilled" ? candidates.value : value.candidates,
+          positions: positions.status === "fulfilled" ? positions.value : value.positions,
+          orders: orders.status === "fulfilled" ? orders.value : value.orders,
+        }));
+      }
     } catch (error) {
       if (mounted.current) setData((value) => ({ ...value, loading: false, error: error instanceof Error ? error.message : "Unknown API error" }));
     }

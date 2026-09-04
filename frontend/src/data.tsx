@@ -72,17 +72,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     void refresh();
     let socket: WebSocket | null = null;
     let timer: number | null = null;
+    let stopped = false;
+    const reconnect = () => {
+      if (!stopped) timer = window.setTimeout(connect, 2000);
+    };
     const connect = () => {
-      socket = new WebSocket(eventStreamUrl());
+      try {
+        socket = new WebSocket(eventStreamUrl());
+      } catch {
+        setData((value) => ({ ...value, connected: false }));
+        reconnect();
+        return;
+      }
       socket.onopen = () => setData((value) => ({ ...value, connected: true }));
       socket.onmessage = (event) => { if (JSON.parse(event.data).type !== "heartbeat") void refresh(); };
       socket.onclose = () => {
         setData((value) => ({ ...value, connected: false }));
-        timer = window.setTimeout(connect, 2000);
+        reconnect();
       };
     };
     connect();
     return () => {
+      stopped = true;
       mounted.current = false;
       if (timer) window.clearTimeout(timer);
       socket?.close();

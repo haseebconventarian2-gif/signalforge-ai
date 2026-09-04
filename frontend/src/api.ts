@@ -22,7 +22,8 @@ export function eventStreamUrl(): string {
     "/api/v1/events",
     configuredOrigin || window.location.origin,
   );
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  if (url.protocol === "https:") url.protocol = "wss:";
+  if (url.protocol === "http:") url.protocol = "ws:";
   return url.toString();
 }
 

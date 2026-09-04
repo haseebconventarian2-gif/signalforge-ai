@@ -54,3 +54,44 @@ async def test_service_follows_pagination_and_prefers_latest_trade() -> None:
     assert provider.queries[1].page_token == "next"
     assert result[0].underlying_price == 103
     assert result[0].data_timestamp == datetime(2026, 9, 3, tzinfo=UTC)
+
+
+def test_incomplete_daily_bar_is_excluded_during_market_hours() -> None:
+    previous = Bar(
+        symbol="SPY",
+        timestamp=datetime(2026, 9, 3, 4, tzinfo=UTC),
+        open=Decimal("100"),
+        high=Decimal("102"),
+        low=Decimal("99"),
+        close=Decimal("101"),
+        volume=Decimal("1000"),
+    )
+    forming = previous.model_copy(
+        update={"timestamp": datetime(2026, 9, 4, 4, tzinfo=UTC), "volume": Decimal("10")}
+    )
+
+    completed = MarketDataService._completed_daily_bars(
+        (previous, forming),
+        as_of=datetime(2026, 9, 4, 14, tzinfo=UTC),
+    )
+
+    assert completed == (previous,)
+
+
+def test_current_daily_bar_is_retained_after_market_close() -> None:
+    bar = Bar(
+        symbol="SPY",
+        timestamp=datetime(2026, 9, 4, 4, tzinfo=UTC),
+        open=Decimal("100"),
+        high=Decimal("102"),
+        low=Decimal("99"),
+        close=Decimal("101"),
+        volume=Decimal("1000"),
+    )
+
+    completed = MarketDataService._completed_daily_bars(
+        (bar,),
+        as_of=datetime(2026, 9, 4, 21, tzinfo=UTC),
+    )
+
+    assert completed == (bar,)

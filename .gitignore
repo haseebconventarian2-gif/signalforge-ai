@@ -11,5 +11,6 @@ htmlcov/
 dist/
 build/
 node_modules/
+.vercel/
 frontend/test-results/
 frontend/*.tsbuildinfo
